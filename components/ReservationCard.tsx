@@ -39,7 +39,7 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
     if (!dateStr) return "";
     const [y, m, d] = dateStr.split("-");
     const date = new Date(Number(y), Number(m) - 1, Number(d));
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return date.toLocaleDateString("es-AR", { month: "short", day: "numeric", year: "numeric" });
   }
 
   return (
@@ -67,7 +67,7 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           }
-          label="Date"
+          label="Fecha"
           value={formatDisplayDate(reservation.date)}
         />
         <Detail
@@ -76,7 +76,7 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           }
-          label="Time"
+          label="Horario"
           value={`${reservation.timeFrom} → ${reservation.timeTo}`}
         />
         <Detail
@@ -85,7 +85,7 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           }
-          label="Duration"
+          label="Duración"
           value={`${duration}h`}
         />
       </div>
@@ -101,7 +101,7 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
           <button
             onClick={copyHash}
             className="flex-shrink-0 p-1 rounded bg-surface-700 hover:bg-surface-600 text-surface-500 hover:text-white transition-all"
-            title="Copy transaction hash"
+            title="Copiar hash de transacción"
           >
             {copied ? (
               <svg className="w-3 h-3 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -132,16 +132,16 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Cancel Reservation
+              Cancelar Reserva
             </button>
           ) : (
             <div className="flex items-center gap-3 animate-fade-in">
-              <span className="text-sm text-surface-300">Are you sure?</span>
+              <span className="text-sm text-surface-300">¿Estás seguro?</span>
               <button
                 onClick={handleCancel}
                 className="px-3 py-1.5 text-xs font-semibold bg-danger/15 border border-danger/30 text-danger rounded-lg hover:bg-danger/25 transition-all"
               >
-                Yes, cancel
+                Sí, cancelar
               </button>
               <button
                 onClick={() => setShowConfirm(false)}

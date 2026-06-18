@@ -12,12 +12,12 @@ const BADGE_STYLES: Record<BadgeStatus, string> = {
 };
 
 const BADGE_LABELS: Record<BadgeStatus, string> = {
-  available: "Available",
-  occupied: "Occupied",
-  reserved: "Reserved",
-  active: "Active",
-  expired: "Expired",
-  cancelled: "Cancelled",
+  available: "Disponible",
+  occupied: "Ocupado",
+  reserved: "Reservado",
+  active: "Activa",
+  expired: "Vencida",
+  cancelled: "Cancelada",
 };
 
 const DOT_COLORS: Record<BadgeStatus, string> = {

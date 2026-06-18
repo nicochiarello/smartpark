@@ -97,8 +97,8 @@ export default function ReservationModal({
           {/* CONFIRM STATE */}
           {state === "confirm" && (
             <>
-              <h2 className="text-xl font-bold text-white mb-1">Confirm Reservation</h2>
-              <p className="text-sm text-surface-400 mb-6">Review your booking details below</p>
+              <h2 className="text-xl font-bold text-white mb-1">Confirmar Reserva</h2>
+              <p className="text-sm text-surface-400 mb-6">Revisá los detalles de tu reserva</p>
 
               {/* Summary card */}
               <div className="bg-surface-800 rounded-xl p-4 space-y-3 border border-surface-700 mb-5">
@@ -107,13 +107,13 @@ export default function ReservationModal({
                 <InfoRow icon="🕐" label={`${timeFrom} → ${timeTo}`} />
                 <InfoRow
                   icon="⏱"
-                  label={`${duration} hour${duration !== 1 ? "s" : ""}`}
+                  label={`${duration} hora${duration !== 1 ? "s" : ""}`}
                 />
                 <div className="border-t border-surface-700 pt-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">Ξ</span>
-                      <span className="text-white font-medium">Total</span>
+                      <span className="text-white font-medium">Total a pagar</span>
                     </div>
                     <span className="text-accent font-bold text-lg">{formatEth(total)}</span>
                   </div>
@@ -126,7 +126,7 @@ export default function ReservationModal({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-xs text-brand-300 leading-relaxed">
-                  This transaction will be permanently recorded on the blockchain, ensuring full transparency and preventing unauthorized modifications.
+                  Esta transacción quedará registrada permanentemente en la blockchain, garantizando transparencia total e inmutabilidad.
                 </p>
               </div>
 
@@ -136,13 +136,13 @@ export default function ReservationModal({
                   onClick={onClose}
                   className="flex-1 py-3 rounded-xl border border-surface-600 text-surface-300 font-medium text-sm hover:bg-surface-700 hover:text-white transition-all"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   onClick={handleConfirm}
                   className="flex-1 py-3 rounded-xl gradient-brand text-white font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all shadow-glow-brand"
                 >
-                  Confirm & Pay
+                  Confirmar y Pagar
                 </button>
               </div>
             </>
@@ -158,12 +158,12 @@ export default function ReservationModal({
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Processing transaction...</h3>
-                <p className="text-sm text-surface-400 mt-1">Broadcasting to the blockchain</p>
+                <h3 className="text-lg font-bold text-white">Procesando transacción...</h3>
+                <p className="text-sm text-surface-400 mt-1">Transmitiendo a la blockchain</p>
               </div>
               <div className="flex items-center gap-2 text-xs text-surface-500">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
-                <span>Waiting for confirmation</span>
+                <span>Esperando confirmación</span>
               </div>
             </div>
           )}
@@ -190,23 +190,23 @@ export default function ReservationModal({
                     />
                   </svg>
                 </div>
-                <h2 className="text-xl font-bold text-white">Reservation Confirmed!</h2>
+                <h2 className="text-xl font-bold text-white">¡Reserva Confirmada!</h2>
                 <p className="text-sm text-surface-400 mt-1">
-                  Your parking spot has been secured on the blockchain
+                  Tu lugar de estacionamiento quedó registrado en la blockchain
                 </p>
               </div>
 
               {/* Tx hash */}
               <div className="bg-surface-800 rounded-xl p-4 border border-surface-700 mb-5">
                 <div className="text-xs text-surface-500 uppercase tracking-wider mb-2">
-                  Transaction Hash
+                  Hash de Transacción
                 </div>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 text-xs font-mono text-accent truncate">{truncatedHash}</code>
                   <button
                     onClick={copyHash}
                     className="flex-shrink-0 p-1.5 rounded-lg bg-surface-700 hover:bg-surface-600 text-surface-400 hover:text-white transition-all"
-                    title="Copy full hash"
+                    title="Copiar hash completo"
                   >
                     {copied ? (
                       <svg className="w-3.5 h-3.5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -226,7 +226,7 @@ export default function ReservationModal({
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
-                  View on Explorer
+                  Ver en el Explorador
                 </a>
               </div>
 
@@ -234,7 +234,7 @@ export default function ReservationModal({
                 onClick={handleDone}
                 className="w-full py-3.5 rounded-xl gradient-brand text-white font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all shadow-glow-brand"
               >
-                Done
+                Listo
               </button>
             </>
           )}
@@ -260,5 +260,5 @@ function formatDate(dateStr: string): string {
   if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-");
   const date = new Date(Number(y), Number(m) - 1, Number(d));
-  return date.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  return date.toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
