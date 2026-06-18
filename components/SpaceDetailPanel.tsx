@@ -46,11 +46,11 @@ export default function SpaceDetailPanel({
   const slotPercent = Math.round((space.availableSlots / space.totalSlots) * 100);
 
   return (
-    <div className="absolute top-0 right-0 h-full w-full sm:w-[420px] glass border-l border-surface-700/50 shadow-panel z-30 flex flex-col overflow-y-auto animate-slide-in-right">
+    <div className="absolute top-0 right-0 h-full w-full sm:w-[420px] glass border-l border-surface-700/50 shadow-panel z-[1001] flex flex-col overflow-y-auto animate-slide-in-right">
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-surface-700/80 hover:bg-surface-600 text-surface-400 hover:text-white transition-all duration-150"
+        className="absolute top-4 right-4 z-[1002] w-8 h-8 flex items-center justify-center rounded-full bg-surface-700/80 hover:bg-surface-600 text-surface-400 hover:text-white transition-all duration-150"
         aria-label="Close panel"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,7 +89,7 @@ export default function SpaceDetailPanel({
         <div className="grid grid-cols-2 gap-3">
           {/* Slots */}
           <div className="bg-surface-800 rounded-xl p-3">
-            <div className="text-xs text-surface-500 uppercase tracking-wider mb-1">Availability</div>
+            <div className="text-xs text-surface-500 uppercase tracking-wider mb-1">Disponibilidad</div>
             <div className="text-base font-semibold text-white">
               {space.availableSlots}
               <span className="text-surface-400 font-normal"> / {space.totalSlots}</span>
@@ -107,11 +107,11 @@ export default function SpaceDetailPanel({
 
           {/* Price */}
           <div className="bg-surface-800 rounded-xl p-3">
-            <div className="text-xs text-surface-500 uppercase tracking-wider mb-1">Price</div>
+            <div className="text-xs text-surface-500 uppercase tracking-wider mb-1">Precio</div>
             <div className="text-base font-semibold text-white">
               {formatEth(space.pricePerHour)}
             </div>
-            <div className="text-xs text-surface-500 mt-1">per hour</div>
+            <div className="text-xs text-surface-500 mt-1">por hora</div>
           </div>
         </div>
 
@@ -123,14 +123,14 @@ export default function SpaceDetailPanel({
         {/* Date & Time selection */}
         <div>
           <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">
-            Select your time
+            Seleccioná tu horario
           </h3>
 
           <div className="space-y-3">
             {/* Date */}
             <div>
               <label className="block text-xs font-medium text-surface-400 mb-1.5 uppercase tracking-wider">
-                Date
+                Fecha
               </label>
               <input
                 type="date"
@@ -155,15 +155,15 @@ export default function SpaceDetailPanel({
         {duration > 0 && (
           <div className="bg-surface-800 rounded-xl p-4 space-y-2 border border-surface-700 animate-fade-in">
             <div className="flex justify-between text-sm">
-              <span className="text-surface-400">Duration</span>
-              <span className="text-white font-medium">{duration} hour{duration !== 1 ? "s" : ""}</span>
+              <span className="text-surface-400">Duración</span>
+              <span className="text-white font-medium">{duration} hora{duration !== 1 ? "s" : ""}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-surface-400">Rate</span>
+              <span className="text-surface-400">Tarifa</span>
               <span className="text-white font-medium">{formatEth(space.pricePerHour)} / hr</span>
             </div>
             <div className="border-t border-surface-700 pt-2 flex justify-between">
-              <span className="text-white font-semibold">Total</span>
+              <span className="text-white font-semibold">Total a pagar</span>
               <span className="text-accent font-bold">{formatEth(total)}</span>
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function SpaceDetailPanel({
               style={{ display: tooltipVisible ? "block" : "none" }}
             >
               <div className="bg-surface-700 text-surface-200 text-xs px-3 py-2 rounded-lg shadow-lg border border-surface-600">
-                Connect your wallet to reserve
+                Conectá tu billetera para reservar
                 <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-surface-700 border-b border-r border-surface-600 rotate-45" />
               </div>
             </div>
@@ -198,21 +198,21 @@ export default function SpaceDetailPanel({
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                 </svg>
-                No slots available
+                Sin lugares disponibles
               </>
             ) : !walletAddress ? (
               <>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Connect wallet to reserve
+                Conectá tu billetera para reservar
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Reserve Parking
+                Reservar Lugar
               </>
             )}
           </button>
@@ -220,7 +220,7 @@ export default function SpaceDetailPanel({
 
         {/* Blockchain note */}
         <p className="text-xs text-surface-500 text-center leading-relaxed">
-          Reservation secured by blockchain — transparent, tamper-proof.
+          Reserva asegurada por blockchain — transparente e inmutable.
         </p>
       </div>
     </div>

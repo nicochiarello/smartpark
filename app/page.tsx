@@ -48,7 +48,7 @@ export default function HomePage() {
       />
 
       {/* Floating filter bar */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4 pointer-events-none">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1001] w-full max-w-2xl px-4 pointer-events-none">
         <div className="glass rounded-2xl px-5 py-4 shadow-panel pointer-events-auto">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {/* Date */}
@@ -80,21 +80,21 @@ export default function HomePage() {
 
             {/* Legend */}
             <div className="hidden sm:flex items-center gap-3 flex-shrink-0 pl-2 border-l border-surface-700">
-              <LegendDot color="bg-success" label="Free" />
-              <LegendDot color="bg-warning" label="Reserved" />
-              <LegendDot color="bg-danger" label="Full" />
+              <LegendDot color="bg-success" label="Libre" />
+              <LegendDot color="bg-warning" label="Reservado" />
+              <LegendDot color="bg-danger" label="Completo" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Space count badge */}
-      <div className="absolute bottom-6 left-4 z-20 glass rounded-xl px-4 py-2.5 flex items-center gap-2">
+      <div className="absolute bottom-6 left-4 z-[1001] glass rounded-xl px-4 py-2.5 flex items-center gap-2">
         <svg className="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         </svg>
         <span className="text-sm text-surface-200 font-medium">
-          {PARKING_SPACES.filter((s) => s.status === "available").length} spaces available
+          {PARKING_SPACES.filter((s) => s.status === "available").length} espacios disponibles
         </span>
       </div>
 
