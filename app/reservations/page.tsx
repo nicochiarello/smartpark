@@ -10,10 +10,10 @@ import ReservationCard from "@/components/ReservationCard";
 type FilterTab = "all" | ReservationStatus;
 
 const TABS: { key: FilterTab; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "active", label: "Active" },
-  { key: "expired", label: "Expired" },
-  { key: "cancelled", label: "Cancelled" },
+  { key: "all", label: "Todas" },
+  { key: "active", label: "Activas" },
+  { key: "expired", label: "Vencidas" },
+  { key: "cancelled", label: "Canceladas" },
 ];
 
 export default function ReservationsPage() {
@@ -39,9 +39,9 @@ export default function ReservationsPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-white">My Reservations</h1>
+              <h1 className="text-3xl font-bold text-white">Mis Reservas</h1>
               <p className="text-surface-400 mt-1 text-sm">
-                Your parking history recorded on the blockchain
+                Tu historial de estacionamiento registrado en la blockchain
               </p>
             </div>
             {walletAddress && (
@@ -115,15 +115,15 @@ function EmptyState({ filter }: { filter: FilterTab }) {
         </svg>
       </div>
 
-      <h3 className="text-lg font-semibold text-white mb-2">No reservations found</h3>
+      <h3 className="text-lg font-semibold text-white mb-2">No se encontraron reservas</h3>
       <p className="text-sm text-surface-400 max-w-sm mb-6">
         {filter === "active"
-          ? "You don't have any active reservations. Find a parking space on the map."
+          ? "No tenés reservas activas. Buscá un lugar en el mapa."
           : filter === "cancelled"
-          ? "No cancelled reservations yet."
+          ? "Todavía no tenés reservas canceladas."
           : filter === "expired"
-          ? "No expired reservations yet."
-          : "You haven't made any reservations yet. Start by browsing the map."}
+          ? "Todavía no tenés reservas vencidas."
+          : "Todavía no realizaste ninguna reserva. Explorá el mapa para empezar."}
       </p>
 
       {filter === "active" || filter === "all" ? (
@@ -134,7 +134,7 @@ function EmptyState({ filter }: { filter: FilterTab }) {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           </svg>
-          Find Parking
+          Buscar Estacionamiento
         </Link>
       ) : null}
     </div>

@@ -25,7 +25,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const eth = typeof window !== "undefined" ? (window as any).ethereum : undefined;
     if (!eth) {
-      alert("MetaMask not detected. Please install MetaMask to connect your wallet.");
+      alert("MetaMask no detectado. Por favor instalá MetaMask para conectar tu billetera.");
       return;
     }
     try {

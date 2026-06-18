@@ -29,7 +29,7 @@ export default function TimeRangeSelector({
       const [fh] = fromValue.split(":").map(Number);
       const [th] = toValue.split(":").map(Number);
       if (th <= fh) {
-        setError("End time must be after start time");
+        setError("La hora de fin debe ser posterior a la de inicio");
       } else {
         setError(null);
       }
@@ -46,11 +46,11 @@ export default function TimeRangeSelector({
         <div>
           {!compact && (
             <label className="block text-xs font-medium text-surface-400 mb-1.5 uppercase tracking-wider">
-              From
+              Desde
             </label>
           )}
           <select value={fromValue} onChange={(e) => onFromChange(e.target.value)} className={selectClass}>
-            <option value="">From</option>
+            <option value="">Desde</option>
             {HOURS.slice(0, -1).map((h) => (
               <option key={h} value={h}>
                 {h}
@@ -68,11 +68,11 @@ export default function TimeRangeSelector({
         <div>
           {!compact && (
             <label className="block text-xs font-medium text-surface-400 mb-1.5 uppercase tracking-wider">
-              To
+              Hasta
             </label>
           )}
           <select value={toValue} onChange={(e) => onToChange(e.target.value)} className={selectClass}>
-            <option value="">To</option>
+            <option value="">Hasta</option>
             {HOURS.slice(1).map((h) => (
               <option key={h} value={h}>
                 {h}
