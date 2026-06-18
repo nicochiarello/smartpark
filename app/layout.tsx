@@ -4,9 +4,9 @@ import { AppProvider } from "@/context/AppContext";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "SmartPark — Blockchain Parking",
-  description: "Reserve public parking spaces transparently using blockchain technology. Fighting informal parking extortion in Argentina.",
-  keywords: ["parking", "blockchain", "Argentina", "Mendoza", "smart city"],
+  title: "SmartPark — Estacionamiento Blockchain",
+  description: "Reservá lugares de estacionamiento público de forma transparente con blockchain. Combatimos la extorsión informal en Argentina.",
+  keywords: ["estacionamiento", "blockchain", "Argentina", "Mendoza", "smart city"],
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body className="antialiased bg-surface-900 text-surface-100">
         <AppProvider>
           <Header />

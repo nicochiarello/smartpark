@@ -46,7 +46,7 @@ export default function WalletButton() {
                   d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                 />
               </svg>
-              Disconnect
+              Desconectar
             </button>
           </div>
         )}
@@ -77,7 +77,7 @@ export default function WalletButton() {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          Connecting...
+          Conectando...
         </>
       ) : (
         <>
@@ -89,7 +89,7 @@ export default function WalletButton() {
               d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
             />
           </svg>
-          Connect Wallet
+          Conectar Billetera
         </>
       )}
     </button>
