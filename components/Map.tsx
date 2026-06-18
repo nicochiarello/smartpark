@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import "leaflet/dist/leaflet.css";
 import { ParkingSpace } from "@/lib/types";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SpacePinSVG } from "./SpacePin";
@@ -11,8 +12,8 @@ interface MapProps {
   onSelectSpace: (space: ParkingSpace) => void;
 }
 
-const MENDOZA_CENTER: [number, number] = [-32.8908, -68.8272];
-const DEFAULT_ZOOM = 15;
+const CHAMPAGNAT_CENTER: [number, number] = [-32.9295, -68.8468];
+const DEFAULT_ZOOM = 16;
 
 export default function Map({ spaces, selectedSpace, onSelectSpace }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -29,13 +30,11 @@ export default function Map({ spaces, selectedSpace, onSelectSpace }: MapProps) 
 
     async function initMap() {
       const L = (await import("leaflet")).default;
-      // @ts-expect-error — CSS module import for leaflet styles
-      await import("leaflet/dist/leaflet.css");
 
       if (cancelled || !mapRef.current || leafletMapRef.current) return;
 
       const map = L.map(mapRef.current, {
-        center: MENDOZA_CENTER,
+        center: CHAMPAGNAT_CENTER,
         zoom: DEFAULT_ZOOM,
         zoomControl: true,
         attributionControl: true,
@@ -123,7 +122,7 @@ export default function Map({ spaces, selectedSpace, onSelectSpace }: MapProps) 
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <span className="text-sm text-surface-400">Loading map...</span>
+            <span className="text-sm text-surface-400">Cargando mapa...</span>
           </div>
         </div>
       )}
