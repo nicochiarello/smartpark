@@ -1,256 +1,113 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.24;
 
-contract SmartPark {
-    // ─── Structs ───────────────────────────────────────────────
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-    struct ParkingSpace {
-        string id;
-        string name;
-        string location;
-        uint256 pricePerHour;
-        bool isOccupied;
-        bool exists;
+/// @title ParkingRegistry
+/// @notice Registro inmutable de eventos de estacionamiento para SmartPark Web3.
+/// @dev La validación de formato de patente (regex) se hace en el backend ANTES
+///      de llamar a este contrato. El contrato no valida formato para ahorrar gas.
+contract ParkingRegistry is Ownable {
+    struct ParkingRecord {
+        string licensePlate; // Patente del vehículo
+        uint256 spaceId; // ID del espacio de estacionamiento
+        uint256 timestamp; // Momento del evento (block timestamp)
+        bool occupied; // true = el auto ocupó el lugar, false = el auto se fue
+        uint256 durationSeconds; // Duración de la estadía (0 si occupied == true)
+        uint256 amountPaid; // Monto cobrado via Mercado Pago/tarjeta (0 si no aplica)
     }
 
-    struct Reservation {
-        uint256 id;
-        string spaceId;
-        address user;
-        string date;
-        string timeFrom;
-        string timeTo;
-        uint256 totalPaid;
-        bool active;
-    }
+    // Direcciones autorizadas a reportar eventos (ej: la wallet de tu backend/IA)
+    mapping(address => bool) public authorizedReporters;
 
-    // ─── State ─────────────────────────────────────────────────
+    // Historial de eventos, indexado por ID de espacio
+    mapping(uint256 => ParkingRecord[]) private historyBySpace;
 
-    address public owner;
+    // Contador total de eventos registrados en todo el sistema
+    uint256 public totalEvents;
 
-    mapping(string => ParkingSpace) public spaces;
-    string[] public spaceIds;
-
-    uint256 public reservationCount;
-    mapping(uint256 => Reservation) public reservations;
-
-    mapping(string => bool) public slotTaken;
-
-    mapping(address => uint256[]) public userReservations;
-
-    // ─── Events ────────────────────────────────────────────────
-
-    event SpaceCreated(string spaceId, string name);
-    event ReservationCreated(
-        uint256 reservationId,
-        string spaceId,
-        address user,
-        string date,
-        string timeFrom,
-        string timeTo,
-        uint256 totalPaid
+    event ReporterAuthorized(address indexed reporter);
+    event ReporterRevoked(address indexed reporter);
+    event ParkingEventRegistered(
+        uint256 indexed spaceId,
+        string licensePlate,
+        bool occupied,
+        uint256 timestamp,
+        uint256 durationSeconds,
+        uint256 amountPaid
     );
-    event ReservationCancelled(uint256 reservationId, address user);
-    event OccupancyChanged(string spaceId, bool occupied);
 
-    // ─── Constructor ───────────────────────────────────────────
-
-    constructor() {
-        owner = msg.sender;
-
-        _createSpace(
-            "space-1",
-            "Estacionamiento San Martin 400",
-            "San Martin 400, Mendoza",
-            0.001 ether
+    modifier onlyAuthorized() {
+        require(
+            authorizedReporters[msg.sender],
+            "ParkingRegistry: not authorized"
         );
-        _createSpace(
-            "space-2",
-            "Estacionamiento Sarmiento 200",
-            "Sarmiento 200, Mendoza",
-            0.001 ether
-        );
-        _createSpace(
-            "space-3",
-            "Estacionamiento Av. Espana",
-            "Av. Espana 500, Mendoza",
-            0.001 ether
-        );
-        _createSpace(
-            "space-4",
-            "Estacionamiento Garibaldi",
-            "Garibaldi 300, Mendoza",
-            0.001 ether
-        );
-        _createSpace(
-            "space-5",
-            "Estacionamiento Las Heras",
-            "Las Heras 100, Mendoza",
-            0.001 ether
-        );
-        _createSpace(
-            "space-6",
-            "Estacionamiento Gutierrez",
-            "Gutierrez 450, Mendoza",
-            0.001 ether
-        );
-        _createSpace(
-            "space-7",
-            "Estacionamiento Montevideo",
-            "Montevideo 600, Mendoza",
-            0.001 ether
-        );
-        _createSpace(
-            "space-8",
-            "Estacionamiento Colon",
-            "Colon 700, Mendoza",
-            0.001 ether
-        );
-        _createSpace(
-            "space-9",
-            "Estacionamiento Rivadavia",
-            "Rivadavia 350, Mendoza",
-            0.001 ether
-        );
-        _createSpace(
-            "space-10",
-            "Estacionamiento Belgrano",
-            "Belgrano 800, Mendoza",
-            0.001 ether
-        );
-    }
-
-    // ─── Modifiers ─────────────────────────────────────────────
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only the municipality can do this");
         _;
     }
 
-    modifier spaceExists(string memory spaceId) {
-        require(spaces[spaceId].exists, "Parking space does not exist");
-        _;
+    constructor() Ownable(msg.sender) {
+        // Quien despliega el contrato queda autorizado automaticamente
+        authorizedReporters[msg.sender] = true;
     }
 
-    // ─── Internal ──────────────────────────────────────────────
-
-    function _createSpace(
-        string memory id,
-        string memory name,
-        string memory location,
-        uint256 pricePerHour
-    ) internal {
-        spaces[id] = ParkingSpace(
-            id,
-            name,
-            location,
-            pricePerHour,
-            false,
-            true
-        );
-        spaceIds.push(id);
-        emit SpaceCreated(id, name);
+    /// @notice El owner autoriza una nueva wallet (ej: la de tu backend) a reportar eventos.
+    function addAuthorizedReporter(address reporter) external onlyOwner {
+        authorizedReporters[reporter] = true;
+        emit ReporterAuthorized(reporter);
     }
 
-    function _slotKey(
-        string memory spaceId,
-        string memory date,
-        string memory timeFrom
-    ) internal pure returns (string memory) {
-        return string(abi.encodePacked(spaceId, "_", date, "_", timeFrom));
+    /// @notice El owner revoca el permiso de una wallet previamente autorizada.
+    function removeAuthorizedReporter(address reporter) external onlyOwner {
+        authorizedReporters[reporter] = false;
+        emit ReporterRevoked(reporter);
     }
 
-    // ─── Public functions ──────────────────────────────────────
+    /// @notice Registra un evento de ocupacion/liberacion de un espacio. Solo wallets autorizadas.
+    /// @param licensePlate Patente ya validada por el backend (regex) antes de llegar acá.
+    /// @param spaceId ID del espacio físico (coincide con el ID en tu base de datos).
+    /// @param occupied true si el auto acaba de estacionar, false si se fue.
+    /// @param durationSeconds Duración de la estadía en segundos (enviar 0 si occupied == true).
+    /// @param amountPaid Monto cobrado via Mercado Pago/tarjeta (enviar 0 si no hubo cobro en este evento).
+    function registerEvent(
+        string calldata licensePlate,
+        uint256 spaceId,
+        bool occupied,
+        uint256 durationSeconds,
+        uint256 amountPaid
+    ) external onlyAuthorized {
+        require(bytes(licensePlate).length > 0, "ParkingRegistry: empty plate");
 
-    function reserve(
-        string memory spaceId,
-        string memory date,
-        string memory timeFrom,
-        string memory timeTo,
-        uint256 durationHours
-    ) external payable spaceExists(spaceId) {
-        ParkingSpace memory space = spaces[spaceId];
-
-        uint256 expectedPayment = space.pricePerHour * durationHours;
-        require(msg.value == expectedPayment, "Incorrect ETH amount sent");
-
-        string memory key = _slotKey(spaceId, date, timeFrom);
-        require(!slotTaken[key], "This slot is already reserved");
-
-        slotTaken[key] = true;
-
-        reservationCount++;
-        reservations[reservationCount] = Reservation({
-            id: reservationCount,
+        ParkingRecord memory record = ParkingRecord({
+            licensePlate: licensePlate,
             spaceId: spaceId,
-            user: msg.sender,
-            date: date,
-            timeFrom: timeFrom,
-            timeTo: timeTo,
-            totalPaid: msg.value,
-            active: true
+            timestamp: block.timestamp,
+            occupied: occupied,
+            durationSeconds: durationSeconds,
+            amountPaid: amountPaid
         });
 
-        userReservations[msg.sender].push(reservationCount);
+        historyBySpace[spaceId].push(record);
+        totalEvents += 1;
 
-        emit ReservationCreated(
-            reservationCount,
+        emit ParkingEventRegistered(
             spaceId,
-            msg.sender,
-            date,
-            timeFrom,
-            timeTo,
-            msg.value
+            licensePlate,
+            occupied,
+            block.timestamp,
+            durationSeconds,
+            amountPaid
         );
     }
 
-    function cancelReservation(uint256 reservationId) external {
-        Reservation storage res = reservations[reservationId];
-        require(res.user == msg.sender, "You did not make this reservation");
-        require(res.active, "Reservation is already cancelled");
-
-        res.active = false;
-
-        string memory key = _slotKey(res.spaceId, res.date, res.timeFrom);
-        slotTaken[key] = false;
-
-        payable(msg.sender).transfer(res.totalPaid);
-
-        emit ReservationCancelled(reservationId, msg.sender);
+    /// @notice Devuelve el historial completo de eventos de un espacio especifico.
+    function getHistoryBySpace(
+        uint256 spaceId
+    ) external view returns (ParkingRecord[] memory) {
+        return historyBySpace[spaceId];
     }
 
-    // Called by the vision script to update real-time occupancy
-    function setOccupied(
-        string memory spaceId,
-        bool occupied
-    ) external onlyOwner {
-        spaces[spaceId].isOccupied = occupied;
-        emit OccupancyChanged(spaceId, occupied);
-    }
-
-    function getMyReservationIds() external view returns (uint256[] memory) {
-        return userReservations[msg.sender];
-    }
-
-    function getReservation(
-        uint256 reservationId
-    ) external view returns (Reservation memory) {
-        return reservations[reservationId];
-    }
-
-    function isSlotTaken(
-        string memory spaceId,
-        string memory date,
-        string memory timeFrom
-    ) external view returns (bool) {
-        return slotTaken[_slotKey(spaceId, date, timeFrom)];
-    }
-
-    function getSpaceIds() external view returns (string[] memory) {
-        return spaceIds;
-    }
-
-    function withdraw() external onlyOwner {
-        payable(owner).transfer(address(this).balance);
+    /// @notice Devuelve cuantos eventos tiene registrados un espacio.
+    function getEventCount(uint256 spaceId) external view returns (uint256) {
+        return historyBySpace[spaceId].length;
     }
 }
