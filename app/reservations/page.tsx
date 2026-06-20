@@ -17,7 +17,7 @@ const TABS: { key: FilterTab; label: string }[] = [
 ];
 
 export default function ReservationsPage() {
-  const { reservations, walletAddress } = useApp();
+  const { reservations, reservationsLoading, walletAddress } = useApp();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
 
   const filtered =
@@ -84,8 +84,16 @@ export default function ReservationsPage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-        {filtered.length === 0 ? (
-          <EmptyState filter={activeTab} />
+        {reservationsLoading ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <svg className="w-8 h-8 text-brand-500 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span className="text-sm text-surface-400">Cargando reservas desde la blockchain...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <EmptyState filter={activeTab} walletConnected={!!walletAddress} />
         ) : (
           <div className="space-y-4">
             {filtered.map((reservation) => (
@@ -98,7 +106,7 @@ export default function ReservationsPage() {
   );
 }
 
-function EmptyState({ filter }: { filter: FilterTab }) {
+function EmptyState({ filter, walletConnected }: { filter: FilterTab; walletConnected: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="w-20 h-20 rounded-2xl bg-surface-800 border border-surface-700 flex items-center justify-center mb-6">
@@ -117,7 +125,9 @@ function EmptyState({ filter }: { filter: FilterTab }) {
 
       <h3 className="text-lg font-semibold text-white mb-2">No se encontraron reservas</h3>
       <p className="text-sm text-surface-400 max-w-sm mb-6">
-        {filter === "active"
+        {!walletConnected
+          ? "Conectá tu billetera para ver tus reservas registradas en la blockchain."
+          : filter === "active"
           ? "No tenés reservas activas. Buscá un lugar en el mapa."
           : filter === "cancelled"
           ? "Todavía no tenés reservas canceladas."

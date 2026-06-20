@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { ParkingSpace } from "@/lib/types";
 import { useApp } from "@/context/AppContext";
-import { formatEth, generateTxHash, calculateDuration, calculateTotal, generateReservationId } from "@/lib/utils";
+import { getContract, CONTRACT_ABI } from "@/lib/contract";
+import { formatEth, calculateDuration, calculateTotal, generateReservationId } from "@/lib/utils";
 
 type ModalState = "confirm" | "processing" | "success";
 
@@ -22,10 +23,12 @@ export default function ReservationModal({
   timeTo,
   onClose,
 }: ReservationModalProps) {
-  const { addReservation } = useApp();
+  const { addReservation, signer } = useApp();
   const [state, setState] = useState<ModalState>("confirm");
   const [txHash, setTxHash] = useState("");
+  const [onChainId, setOnChainId] = useState<number | undefined>(undefined);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const duration = calculateDuration(timeFrom, timeTo);
   const total = calculateTotal(duration, space.pricePerHour);
@@ -40,11 +43,43 @@ export default function ReservationModal({
   }, [state, onClose]);
 
   async function handleConfirm() {
+    if (!signer) return;
+    setError(null);
     setState("processing");
-    await new Promise((r) => setTimeout(r, 2000));
-    const hash = generateTxHash();
-    setTxHash(hash);
-    setState("success");
+    try {
+      const { ethers } = await import("ethers");
+      const contract = getContract(signer);
+      const value = ethers.parseEther((space.pricePerHour * duration).toFixed(18));
+      const tx = await contract.reserve(space.id, date, timeFrom, timeTo, duration, { value });
+      const receipt = await tx.wait();
+
+      let parsedOnChainId: number | undefined;
+      const iface = new ethers.Interface(CONTRACT_ABI);
+      for (const log of receipt.logs) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const parsed = iface.parseLog({ topics: Array.from(log.topics as any), data: log.data as string });
+          if (parsed?.name === "ReservationCreated") {
+            parsedOnChainId = Number(parsed.args.reservationId);
+            break;
+          }
+        } catch {
+          // not our event
+        }
+      }
+
+      setTxHash(receipt.hash);
+      setOnChainId(parsedOnChainId);
+      setState("success");
+    } catch (err: unknown) {
+      setState("confirm");
+      const e = err as { code?: string | number };
+      if (e.code === "ACTION_REJECTED" || e.code === 4001) {
+        setError("Transacción rechazada por el usuario.");
+      } else {
+        setError("Error en la transacción. Intentá de nuevo.");
+      }
+    }
   }
 
   function handleDone() {
@@ -59,6 +94,7 @@ export default function ReservationModal({
       status: "active",
       txHash,
       totalEth: total,
+      onChainId,
     });
     onClose();
   }
@@ -72,7 +108,7 @@ export default function ReservationModal({
   const truncatedHash = txHash ? `${txHash.slice(0, 10)}...${txHash.slice(-8)}` : "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-[1003] flex items-center justify-center p-4 animate-fade-in">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -121,7 +157,7 @@ export default function ReservationModal({
               </div>
 
               {/* Blockchain notice */}
-              <div className="flex items-start gap-2.5 bg-brand-950/50 border border-brand-800/30 rounded-xl px-4 py-3 mb-6">
+              <div className="flex items-start gap-2.5 bg-brand-950/50 border border-brand-800/30 rounded-xl px-4 py-3 mb-4">
                 <svg className="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -129,6 +165,16 @@ export default function ReservationModal({
                   Esta transacción quedará registrada permanentemente en la blockchain, garantizando transparencia total e inmutabilidad.
                 </p>
               </div>
+
+              {/* Inline error */}
+              {error && (
+                <div className="flex items-center gap-2 bg-danger/10 border border-danger/30 rounded-xl px-4 py-3 mb-4 animate-fade-in">
+                  <svg className="w-4 h-4 text-danger flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-xs text-danger">{error}</p>
+                </div>
+              )}
 
               {/* Buttons */}
               <div className="flex gap-3">
@@ -158,12 +204,12 @@ export default function ReservationModal({
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Procesando transacción...</h3>
-                <p className="text-sm text-surface-400 mt-1">Transmitiendo a la blockchain</p>
+                <h3 className="text-lg font-bold text-white">Esperando confirmación...</h3>
+                <p className="text-sm text-surface-400 mt-1">Aprobá la transacción en MetaMask</p>
               </div>
               <div className="flex items-center gap-2 text-xs text-surface-500">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
-                <span>Esperando confirmación</span>
+                <span>Confirmando en la blockchain</span>
               </div>
             </div>
           )}
@@ -220,7 +266,9 @@ export default function ReservationModal({
                   </button>
                 </div>
                 <a
-                  href="#"
+                  href={`https://amoy.polygonscan.com/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="mt-3 flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

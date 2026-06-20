@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Reservation } from "@/lib/types";
 import { useApp } from "@/context/AppContext";
+import { getContract } from "@/lib/contract";
 import { formatEth, calculateDuration } from "@/lib/utils";
 import StatusBadge from "./StatusBadge";
 
@@ -17,12 +18,17 @@ interface ReservationCardProps {
 }
 
 export default function ReservationCard({ reservation }: ReservationCardProps) {
-  const { cancelReservation } = useApp();
+  const { cancelReservation, signer } = useApp();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const duration = calculateDuration(reservation.timeFrom, reservation.timeTo);
-  const truncatedHash = `${reservation.txHash.slice(0, 10)}...${reservation.txHash.slice(-8)}`;
+  const hasTxHash = !!reservation.txHash;
+  const truncatedHash = hasTxHash
+    ? `${reservation.txHash.slice(0, 10)}...${reservation.txHash.slice(-8)}`
+    : "";
 
   async function copyHash() {
     await navigator.clipboard.writeText(reservation.txHash);
@@ -30,7 +36,26 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function handleCancel() {
+  async function handleCancel() {
+    setCancelError(null);
+    if (signer && reservation.onChainId !== undefined) {
+      setCancelLoading(true);
+      try {
+        const contract = getContract(signer);
+        const tx = await contract.cancelReservation(reservation.onChainId);
+        await tx.wait();
+      } catch (err: unknown) {
+        setCancelLoading(false);
+        const e = err as { code?: string | number };
+        if (e.code === "ACTION_REJECTED" || e.code === 4001) {
+          setCancelError("Transacción rechazada.");
+        } else {
+          setCancelError("Error al cancelar. Intentá de nuevo.");
+        }
+        return;
+      }
+      setCancelLoading(false);
+    }
     cancelReservation(reservation.id);
     setShowConfirm(false);
   }
@@ -92,28 +117,37 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
 
       {/* Bottom row: tx hash + price */}
       <div className="flex items-center justify-between gap-3 pt-3 border-t border-surface-700">
-        {/* Tx hash */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <svg className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-          </svg>
-          <code className="text-xs font-mono text-surface-400 truncate">{truncatedHash}</code>
-          <button
-            onClick={copyHash}
-            className="flex-shrink-0 p-1 rounded bg-surface-700 hover:bg-surface-600 text-surface-500 hover:text-white transition-all"
-            title="Copiar hash de transacción"
-          >
-            {copied ? (
-              <svg className="w-3 h-3 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            )}
-          </button>
-        </div>
+        {/* Tx hash (only if available) */}
+        {hasTxHash ? (
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <svg className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            <code className="text-xs font-mono text-surface-400 truncate">{truncatedHash}</code>
+            <button
+              onClick={copyHash}
+              className="flex-shrink-0 p-1 rounded bg-surface-700 hover:bg-surface-600 text-surface-500 hover:text-white transition-all"
+              title="Copiar hash de transacción"
+            >
+              {copied ? (
+                <svg className="w-3 h-3 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <svg className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            <span className="text-xs text-surface-500">ID #{reservation.onChainId}</span>
+          </div>
+        )}
 
         {/* Price */}
         <span className="text-sm font-semibold text-white flex-shrink-0">
@@ -126,7 +160,7 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
         <div className="mt-4 pt-4 border-t border-surface-700">
           {!showConfirm ? (
             <button
-              onClick={() => setShowConfirm(true)}
+              onClick={() => { setCancelError(null); setShowConfirm(true); }}
               className="flex items-center gap-1.5 text-sm text-danger hover:text-red-400 font-medium transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -135,20 +169,34 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
               Cancelar Reserva
             </button>
           ) : (
-            <div className="flex items-center gap-3 animate-fade-in">
-              <span className="text-sm text-surface-300">¿Estás seguro?</span>
-              <button
-                onClick={handleCancel}
-                className="px-3 py-1.5 text-xs font-semibold bg-danger/15 border border-danger/30 text-danger rounded-lg hover:bg-danger/25 transition-all"
-              >
-                Sí, cancelar
-              </button>
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-3 py-1.5 text-xs font-medium bg-surface-700 text-surface-300 rounded-lg hover:bg-surface-600 transition-all"
-              >
-                No
-              </button>
+            <div className="space-y-2 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-surface-300">¿Estás seguro?</span>
+                <button
+                  onClick={handleCancel}
+                  disabled={cancelLoading}
+                  className="px-3 py-1.5 text-xs font-semibold bg-danger/15 border border-danger/30 text-danger rounded-lg hover:bg-danger/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {cancelLoading && (
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  )}
+                  {cancelLoading ? "Cancelando..." : "Sí, cancelar"}
+                </button>
+                {!cancelLoading && (
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="px-3 py-1.5 text-xs font-medium bg-surface-700 text-surface-300 rounded-lg hover:bg-surface-600 transition-all"
+                  >
+                    No
+                  </button>
+                )}
+              </div>
+              {cancelError && (
+                <p className="text-xs text-danger">{cancelError}</p>
+              )}
             </div>
           )}
         </div>

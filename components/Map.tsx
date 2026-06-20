@@ -12,8 +12,8 @@ interface MapProps {
   onSelectSpace: (space: ParkingSpace) => void;
 }
 
-const CHAMPAGNAT_CENTER: [number, number] = [-32.9295, -68.8468];
-const DEFAULT_ZOOM = 16;
+const MENDOZA_CENTER: [number, number] = [-32.8908, -68.8440];
+const DEFAULT_ZOOM = 15;
 
 export default function Map({ spaces, selectedSpace, onSelectSpace }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -34,7 +34,7 @@ export default function Map({ spaces, selectedSpace, onSelectSpace }: MapProps) 
       if (cancelled || !mapRef.current || leafletMapRef.current) return;
 
       const map = L.map(mapRef.current, {
-        center: CHAMPAGNAT_CENTER,
+        center: MENDOZA_CENTER,
         zoom: DEFAULT_ZOOM,
         zoomControl: true,
         attributionControl: true,

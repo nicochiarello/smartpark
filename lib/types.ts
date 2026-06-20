@@ -26,4 +26,5 @@ export interface Reservation {
   status: ReservationStatus;
   txHash: string;
   totalEth: number;
+  onChainId?: number;
 }

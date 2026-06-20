@@ -32,7 +32,7 @@ export default function WalletButton() {
           <div
             onMouseEnter={() => setShowDisconnect(true)}
             onMouseLeave={() => setShowDisconnect(false)}
-            className="absolute right-0 top-full mt-1 w-40 rounded-xl bg-surface-800 border border-surface-700 shadow-panel overflow-hidden z-50 animate-fade-in"
+            className="absolute right-0 top-full mt-1 w-40 rounded-xl bg-surface-800 border border-surface-700 shadow-panel overflow-hidden z-[1002] animate-fade-in"
           >
             <button
               onClick={disconnectWallet}

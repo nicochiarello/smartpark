@@ -8,7 +8,7 @@ export default function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-16 glass border-b border-surface-700/50">
+    <header className="fixed top-0 left-0 right-0 z-[1002] h-16 glass border-b border-surface-700/50">
       <div className="max-w-screen-2xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
