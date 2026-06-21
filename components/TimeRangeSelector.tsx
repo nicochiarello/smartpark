@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const HOURS = Array.from({ length: 15 }, (_, i) => {
-  const h = i + 8;
-  return `${String(h).padStart(2, "0")}:00`;
-});
+const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
 
 interface TimeRangeSelectorProps {
   fromValue: string;

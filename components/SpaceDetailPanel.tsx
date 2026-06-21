@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { ParkingSpace } from "@/lib/types";
-import { useApp } from "@/context/AppContext";
-import { calculateDuration, calculateTotal, formatEth, getTodayString } from "@/lib/utils";
+import { calculateDuration, calculateTotal, formatARS, getTodayString } from "@/lib/utils";
 import StatusBadge from "./StatusBadge";
 import TimeRangeSelector from "./TimeRangeSelector";
 
@@ -30,50 +28,33 @@ export default function SpaceDetailPanel({
   onClose,
   onReserve,
 }: SpaceDetailPanelProps) {
-  const { walletAddress } = useApp();
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-
-  const duration = timeFrom && timeTo ? calculateDuration(timeFrom, timeTo) : 0;
-  const total = duration > 0 ? calculateTotal(duration, space.pricePerHour) : 0;
-  const canReserve =
-    !!walletAddress &&
-    !!selectedDate &&
-    !!timeFrom &&
-    !!timeTo &&
-    duration > 0 &&
-    space.status !== "occupied";
-
-  const slotPercent = Math.round((space.availableSlots / space.totalSlots) * 100);
+  const duration   = timeFrom && timeTo ? calculateDuration(timeFrom, timeTo) : 0;
+  const total      = duration > 0 ? calculateTotal(duration, space.pricePerHour) : 0;
+  const canReserve = space.status === "available" && !!selectedDate && !!timeFrom && !!timeTo && duration > 0;
 
   return (
     <div className="absolute top-0 right-0 h-full w-full sm:w-[420px] glass border-l border-surface-700/50 shadow-panel z-[1001] flex flex-col overflow-y-auto animate-slide-in-right">
-      {/* Close button */}
       <button
         onClick={onClose}
         className="absolute top-4 right-4 z-[1002] w-8 h-8 flex items-center justify-center rounded-full bg-surface-700/80 hover:bg-surface-600 text-surface-400 hover:text-white transition-all duration-150"
-        aria-label="Close panel"
+        aria-label="Cerrar panel"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
 
-      {/* Image */}
+      {/* Imagen */}
       <div className="relative w-full h-44 flex-shrink-0 overflow-hidden">
-        <img
-          src={space.imageUrl}
-          alt={space.name}
-          className="w-full h-full object-cover"
-        />
+        <img src={space.imageUrl} alt={space.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/40 to-transparent" />
         <div className="absolute bottom-3 left-4">
           <StatusBadge status={space.status} />
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 p-5 space-y-5">
-        {/* Header */}
+        {/* Encabezado */}
         <div>
           <h2 className="text-xl font-bold text-white leading-tight mb-1">{space.name}</h2>
           <div className="flex items-center gap-1.5 text-surface-400 text-sm">
@@ -85,63 +66,47 @@ export default function SpaceDetailPanel({
           </div>
         </div>
 
-        {/* Stats row */}
+        {/* Info rápida */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Slots */}
           <div className="bg-surface-800 rounded-xl p-3">
-            <div className="text-xs text-surface-500 uppercase tracking-wider mb-1">Disponibilidad</div>
-            <div className="text-base font-semibold text-white">
-              {space.availableSlots}
-              <span className="text-surface-400 font-normal"> / {space.totalSlots}</span>
-            </div>
-            <div className="mt-2 h-1.5 bg-surface-700 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${slotPercent}%`,
-                  background: slotPercent > 50 ? "#10b981" : slotPercent > 20 ? "#f59e0b" : "#ef4444",
-                }}
-              />
-            </div>
+            <div className="text-xs text-surface-500 uppercase tracking-wider mb-1">Estado</div>
+            <StatusBadge status={space.status} size="sm" />
           </div>
-
-          {/* Price */}
           <div className="bg-surface-800 rounded-xl p-3">
-            <div className="text-xs text-surface-500 uppercase tracking-wider mb-1">Precio</div>
-            <div className="text-base font-semibold text-white">
-              {formatEth(space.pricePerHour)}
-            </div>
-            <div className="text-xs text-surface-500 mt-1">por hora</div>
+            <div className="text-xs text-surface-500 uppercase tracking-wider mb-1">Tarifa</div>
+            <div className="text-sm font-semibold text-white">{formatARS(space.pricePerHour)}</div>
+            <div className="text-xs text-surface-500 mt-0.5">por hora</div>
           </div>
         </div>
 
-        {/* Description */}
+        {/* Patente actual si está ocupado */}
+        {space.currentLicensePlate && (
+          <div className="bg-surface-800 rounded-xl p-3 border border-surface-700">
+            <div className="text-xs text-surface-500 uppercase tracking-wider mb-1">Patente detectada</div>
+            <div className="font-mono text-sm font-bold text-white">{space.currentLicensePlate}</div>
+          </div>
+        )}
+
         <p className="text-sm text-surface-400 leading-relaxed">{space.description}</p>
 
         <div className="border-t border-surface-700" />
 
-        {/* Date & Time selection */}
+        {/* Selección de horario */}
         <div>
           <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">
             Seleccioná tu horario
           </h3>
-
           <div className="space-y-3">
-            {/* Date */}
             <div>
-              <label className="block text-xs font-medium text-surface-400 mb-1.5 uppercase tracking-wider">
-                Fecha
-              </label>
+              <label className="block text-xs font-medium text-surface-400 mb-1.5 uppercase tracking-wider">Fecha</label>
               <input
                 type="date"
                 value={selectedDate}
                 min={getTodayString()}
                 onChange={(e) => onDateChange(e.target.value)}
-                className="w-full bg-surface-700 border border-surface-600 text-surface-100 text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                className="w-full bg-surface-700 border border-surface-600 text-surface-100 text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
               />
             </div>
-
-            {/* Time range */}
             <TimeRangeSelector
               fromValue={timeFrom}
               toValue={timeTo}
@@ -151,7 +116,7 @@ export default function SpaceDetailPanel({
           </div>
         </div>
 
-        {/* Price summary */}
+        {/* Resumen de precio */}
         {duration > 0 && (
           <div className="bg-surface-800 rounded-xl p-4 space-y-2 border border-surface-700 animate-fade-in">
             <div className="flex justify-between text-sm">
@@ -160,67 +125,45 @@ export default function SpaceDetailPanel({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-surface-400">Tarifa</span>
-              <span className="text-white font-medium">{formatEth(space.pricePerHour)} / hr</span>
+              <span className="text-white font-medium">{formatARS(space.pricePerHour)} / hr</span>
             </div>
             <div className="border-t border-surface-700 pt-2 flex justify-between">
               <span className="text-white font-semibold">Total a pagar</span>
-              <span className="text-accent font-bold">{formatEth(total)}</span>
+              <span className="text-accent font-bold">{formatARS(total)}</span>
             </div>
           </div>
         )}
 
-        {/* Reserve button */}
-        <div className="relative">
-          {!walletAddress && (
-            <div
-              className="absolute -top-12 left-1/2 -translate-x-1/2 w-max max-w-[240px] text-center"
-              style={{ display: tooltipVisible ? "block" : "none" }}
-            >
-              <div className="bg-surface-700 text-surface-200 text-xs px-3 py-2 rounded-lg shadow-lg border border-surface-600">
-                Conectá tu billetera para reservar
-                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-surface-700 border-b border-r border-surface-600 rotate-45" />
-              </div>
-            </div>
+        {/* Botón reservar */}
+        <button
+          onClick={canReserve ? onReserve : undefined}
+          disabled={!canReserve}
+          className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+            canReserve
+              ? "gradient-brand text-white hover:opacity-90 active:scale-[0.98] shadow-glow-brand cursor-pointer"
+              : "bg-surface-700 text-surface-500 cursor-not-allowed"
+          }`}
+        >
+          {space.status === "reserved" ? (
+            "Este lugar ya tiene una reserva activa"
+          ) : space.status === "occupied_valid" ? (
+            "Lugar ocupado — con reserva válida"
+          ) : space.status === "occupied_illegal" ? (
+            "Lugar ocupado — sin reserva (ilegal)"
+          ) : !selectedDate || !timeFrom || !timeTo || duration <= 0 ? (
+            "Seleccioná fecha y horario para reservar"
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              Reservar con MercadoPago
+            </>
           )}
-          <button
-            onClick={canReserve ? onReserve : undefined}
-            onMouseEnter={() => !walletAddress && setTooltipVisible(true)}
-            onMouseLeave={() => setTooltipVisible(false)}
-            disabled={!canReserve}
-            className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-              canReserve
-                ? "gradient-brand text-white hover:opacity-90 active:scale-[0.98] shadow-glow-brand cursor-pointer"
-                : "bg-surface-700 text-surface-500 cursor-not-allowed"
-            }`}
-          >
-            {space.status === "occupied" ? (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-                Sin lugares disponibles
-              </>
-            ) : !walletAddress ? (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Conectá tu billetera para reservar
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Reservar Lugar
-              </>
-            )}
-          </button>
-        </div>
+        </button>
 
-        {/* Blockchain note */}
         <p className="text-xs text-surface-500 text-center leading-relaxed">
-          Reserva asegurada por blockchain — transparente e inmutable.
+          Reserva registrada en blockchain — transparente e inmutable.
         </p>
       </div>
     </div>

@@ -14,40 +14,27 @@ const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 export default function HomePage() {
   const { spaces, spacesLoading, spacesError } = useApp();
   const [selectedSpace, setSelectedSpace] = useState<ParkingSpace | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal]         = useState(false);
 
   const [selectedDate, setSelectedDate] = useState(getTodayString());
-  const [timeFrom, setTimeFrom] = useState("");
-  const [timeTo, setTimeTo] = useState("");
+  const [timeFrom, setTimeFrom]         = useState("");
+  const [timeTo, setTimeTo]             = useState("");
 
   const handleSelectSpace = useCallback((space: ParkingSpace) => {
     setSelectedSpace(space);
   }, []);
 
-  function handleClosePanel() {
-    setSelectedSpace(null);
-  }
-
-  function handleReserve() {
-    setShowModal(true);
-  }
-
-  function handleCloseModal() {
-    setShowModal(false);
-    setSelectedSpace(null);
-  }
+  function handleClosePanel() { setSelectedSpace(null); }
+  function handleReserve()    { setShowModal(true); }
+  function handleCloseModal() { setShowModal(false); setSelectedSpace(null); }
 
   const availableCount = spaces.filter((s) => s.status === "available").length;
 
   return (
     <div className="relative w-full h-[calc(100vh-4rem)] overflow-hidden">
-      <Map
-        spaces={spaces}
-        selectedSpace={selectedSpace}
-        onSelectSpace={handleSelectSpace}
-      />
+      <Map spaces={spaces} selectedSpace={selectedSpace} onSelectSpace={handleSelectSpace} />
 
-      {/* Floating filter bar */}
+      {/* Barra de filtros flotante */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1001] w-full max-w-2xl px-4 pointer-events-none">
         <div className="glass rounded-2xl px-5 py-4 shadow-panel pointer-events-auto">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -76,16 +63,18 @@ export default function HomePage() {
               />
             </div>
 
+            {/* Leyenda de 4 estados */}
             <div className="hidden sm:flex items-center gap-3 flex-shrink-0 pl-2 border-l border-surface-700">
-              <LegendDot color="bg-success" label="Libre" />
-              <LegendDot color="bg-warning" label="Reservado" />
-              <LegendDot color="bg-danger" label="Completo" />
+              <LegendDot color="bg-[#22c55e]" label="Libre" />
+              <LegendDot color="bg-[#3b82f6]" label="Reservado" />
+              <LegendDot color="bg-[#8b5cf6]" label="Ocup. válido" />
+              <LegendDot color="bg-[#ef4444]" label="Ocup. ilegal" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Space count / loading badge */}
+      {/* Contador de espacios */}
       <div className="absolute bottom-6 left-4 z-[1001] glass rounded-xl px-4 py-2.5 flex items-center gap-2">
         {spacesLoading ? (
           <>
@@ -108,7 +97,7 @@ export default function HomePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             </svg>
             <span className="text-sm text-surface-200 font-medium">
-              {availableCount} espacio{availableCount !== 1 ? "s" : ""} disponible{availableCount !== 1 ? "s" : ""}
+              {availableCount} lugar{availableCount !== 1 ? "es" : ""} disponible{availableCount !== 1 ? "s" : ""}
             </span>
           </>
         )}

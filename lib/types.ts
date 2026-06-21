@@ -1,5 +1,5 @@
-export type SpaceStatus = "available" | "occupied" | "reserved";
-export type ReservationStatus = "active" | "expired" | "cancelled";
+export type SpaceStatus = "available" | "reserved" | "occupied_valid" | "occupied_illegal";
+export type ReservationStatus = "active" | "completed" | "cancelled";
 
 export interface ParkingSpace {
   id: string;
@@ -7,12 +7,11 @@ export interface ParkingSpace {
   address: string;
   lat: number;
   lng: number;
-  totalSlots: number;
-  availableSlots: number;
   status: SpaceStatus;
-  pricePerHour: number;
+  pricePerHour: number;   // en ARS
   imageUrl: string;
   description: string;
+  currentLicensePlate?: string;
 }
 
 export interface Reservation {
@@ -25,6 +24,7 @@ export interface Reservation {
   timeTo: string;
   status: ReservationStatus;
   txHash: string;
-  totalEth: number;
-  onChainId?: number;
+  amountPesos: number;
+  userName: string;
+  licensePlate: string;
 }

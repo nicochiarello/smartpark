@@ -1,166 +1,76 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
-import type { Signer } from "ethers";
-import { ParkingSpace, Reservation, ReservationStatus } from "@/lib/types";
-import { CONTRACT_ADDRESS, CONTRACT_ABI, getReadOnlyContract } from "@/lib/contract";
-import { SPACE_METADATA, DEFAULT_SPACE_META } from "@/lib/spaceMetadata";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
+import { ParkingSpace, Reservation } from "@/lib/types";
+import { PARKING_SPACES } from "@/lib/mockData";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000";
+const POLL_MS = 3000;
 
 interface AppContextType {
-  walletAddress: string | null;
-  signer: Signer | null;
-  isConnecting: boolean;
-  connectWallet: () => Promise<void>;
-  disconnectWallet: () => void;
   spaces: ParkingSpace[];
   spacesLoading: boolean;
   spacesError: string | null;
+  refreshSpaces: () => void;
   reservations: Reservation[];
-  reservationsLoading: boolean;
   addReservation: (r: Reservation) => void;
   cancelReservation: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
-async function fetchSpacesFromChain(): Promise<ParkingSpace[]> {
-  const { ethers } = await import("ethers");
-  // Prefer window.ethereum as a passive provider (no account request) so reads
-  // use MetaMask's configured RPC — the public Amoy RPC doesn't have this contract.
+async function fetchSpaces(): Promise<ParkingSpace[]> {
+  const res = await fetch(`${BACKEND_URL}/api/spaces`);
+  if (!res.ok) throw new Error(`Backend respondió ${res.status}`);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const eth = typeof window !== "undefined" ? (window as any).ethereum : null;
-  const contract = eth
-    ? new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, new ethers.BrowserProvider(eth))
-    : getReadOnlyContract();
-  const ids: string[] = await contract.getSpaceIds();
-  const results = await Promise.allSettled(
-    ids.map(async (id) => {
-      const s = await contract.spaces(id);
-      const meta = SPACE_METADATA[id] ?? DEFAULT_SPACE_META;
-      return {
-        id: s.id as string,
-        name: s.name as string,
-        address: s.location as string,
-        lat: meta.lat,
-        lng: meta.lng,
-        totalSlots: meta.totalSlots,
-        availableSlots: meta.availableSlots,
-        status: (s.isOccupied ? "occupied" : "available") as ParkingSpace["status"],
-        pricePerHour: Number(ethers.formatEther(s.pricePerHour as bigint)),
-        imageUrl: meta.imageUrl,
-        description: meta.description,
-      };
-    })
-  );
-  return results
-    .filter((r): r is PromiseFulfilledResult<ParkingSpace> => r.status === "fulfilled")
-    .map((r) => r.value);
-}
-
-async function fetchReservationsFromChain(
-  signer: Signer,
-  spaceList: ParkingSpace[]
-): Promise<Reservation[]> {
-  const { ethers } = await import("ethers");
-  const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-  const ids: bigint[] = await contract.getMyReservationIds();
-  if (ids.length === 0) return [];
-  return Promise.all(
-    ids.map(async (id) => {
-      const r = await contract.getReservation(id);
-      const space = spaceList.find((s) => s.id === r.spaceId);
-      let status: ReservationStatus;
-      if (r.active) {
-        status = "active";
-      } else {
-        const [year, month, day] = (r.date as string).split("-").map(Number);
-        const [hour, minute] = (r.timeTo as string).split(":").map(Number);
-        const endTime = new Date(year, month - 1, day, hour, minute);
-        status = endTime < new Date() ? "expired" : "cancelled";
-      }
-      return {
-        id: `res_${r.id.toString()}`,
-        spaceId: r.spaceId as string,
-        spaceName: space?.name ?? (r.spaceId as string),
-        address: space?.address ?? "",
-        date: r.date as string,
-        timeFrom: r.timeFrom as string,
-        timeTo: r.timeTo as string,
-        status,
-        txHash: "",
-        totalEth: Number(ethers.formatEther(r.totalPaid)),
-        onChainId: Number(r.id),
-      } as Reservation;
-    })
-  );
+  const data: any[] = await res.json();
+  return data.map((s) => ({
+    id:                   s.id,
+    name:                 s.name,
+    address:              s.address,
+    lat:                  Number(s.lat),
+    lng:                  Number(s.lng),
+    status:               s.status,
+    pricePerHour:         Number(s.price_per_hour),
+    imageUrl:             `https://placehold.co/600x300/1e293b/94a3b8?text=${encodeURIComponent(s.name)}`,
+    description:          s.description ?? "",
+    currentLicensePlate:  s.current_license_plate ?? undefined,
+  }));
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [signer, setSigner] = useState<Signer | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
-  const [spacesLoading, setSpacesLoading] = useState(false);
-  const [spacesError, setSpacesError] = useState<string | null>(null);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [reservationsLoading, setReservationsLoading] = useState(false);
+  const [spaces, setSpaces]               = useState<ParkingSpace[]>(PARKING_SPACES);
+  const [spacesLoading, setSpacesLoading] = useState(true);
+  const [spacesError, setSpacesError]     = useState<string | null>(null);
+  const [reservations, setReservations]   = useState<Reservation[]>([]);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const spacesRef = useRef<ParkingSpace[]>([]);
-  useEffect(() => { spacesRef.current = spaces; }, [spaces]);
+  const loadSpaces = useCallback(async () => {
+    try {
+      const loaded = await fetchSpaces();
+      setSpaces(loaded);
+      setSpacesError(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al cargar espacios.";
+      setSpacesError(msg);
+    }
+  }, []);
 
-  // Load spaces on mount — public data, no wallet needed
+  const refreshSpaces = useCallback(() => { loadSpaces(); }, [loadSpaces]);
+
   useEffect(() => {
     setSpacesLoading(true);
-    setSpacesError(null);
-    fetchSpacesFromChain()
-      .then((loaded) => {
-        setSpaces(loaded);
-        if (loaded.length === 0) setSpacesError("El contrato no devolvió espacios.");
-      })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : "Error al cargar espacios.";
-        setSpacesError(msg);
-        console.error("fetchSpacesFromChain:", err);
-      })
-      .finally(() => setSpacesLoading(false));
-  }, []);
-
-  const connectWallet = useCallback(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const eth = typeof window !== "undefined" ? (window as any).ethereum : undefined;
-    if (!eth) {
-      alert("MetaMask no detectado. Por favor instalá MetaMask para conectar tu billetera.");
-      return;
-    }
-    try {
-      setIsConnecting(true);
-      const { ethers } = await import("ethers");
-      const provider = new ethers.BrowserProvider(eth);
-      const accounts = await provider.send("eth_requestAccounts", []);
-      if (accounts.length === 0) return;
-
-      setWalletAddress(accounts[0]);
-      const s = await provider.getSigner();
-      setSigner(s);
-
-      // Load this user's reservations
-      setReservationsLoading(true);
-      fetchReservationsFromChain(s, spacesRef.current)
-        .then(setReservations)
-        .catch((err) => console.error("Failed to load reservations:", err))
-        .finally(() => setReservationsLoading(false));
-    } catch (err) {
-      console.error("Wallet connection failed:", err);
-    } finally {
-      setIsConnecting(false);
-    }
-  }, []);
-
-  const disconnectWallet = useCallback(() => {
-    setWalletAddress(null);
-    setSigner(null);
-    setReservations([]);
-  }, []);
+    loadSpaces().finally(() => setSpacesLoading(false));
+    intervalRef.current = setInterval(loadSpaces, POLL_MS);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [loadSpaces]);
 
   const addReservation = useCallback((r: Reservation) => {
     setReservations((prev) => [r, ...prev]);
@@ -173,22 +83,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider
-      value={{
-        walletAddress,
-        signer,
-        isConnecting,
-        connectWallet,
-        disconnectWallet,
-        spaces,
-        spacesLoading,
-        spacesError,
-        reservations,
-        reservationsLoading,
-        addReservation,
-        cancelReservation,
-      }}
-    >
+    <AppContext.Provider value={{
+      spaces,
+      spacesLoading,
+      spacesError,
+      refreshSpaces,
+      reservations,
+      addReservation,
+      cancelReservation,
+    }}>
       {children}
     </AppContext.Provider>
   );

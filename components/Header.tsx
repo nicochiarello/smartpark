@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import WalletButton from "./WalletButton";
 
 export default function Header() {
   const pathname = usePathname();
@@ -21,24 +20,8 @@ export default function Header() {
               xmlns="http://www.w3.org/2000/svg"
               className="transition-transform duration-200 group-hover:scale-105"
             >
-              {/* Hexagon background */}
-              <path
-                d="M18 2L32 10V26L18 34L4 26V10L18 2Z"
-                fill="url(#logoGrad)"
-              />
-              {/* P letter */}
-              <text
-                x="18"
-                y="23"
-                textAnchor="middle"
-                fontSize="16"
-                fontWeight="700"
-                fontFamily="Inter, sans-serif"
-                fill="white"
-              >
-                P
-              </text>
-              {/* Blockchain nodes */}
+              <path d="M18 2L32 10V26L18 34L4 26V10L18 2Z" fill="url(#logoGrad)" />
+              <text x="18" y="23" textAnchor="middle" fontSize="16" fontWeight="700" fontFamily="Inter, sans-serif" fill="white">P</text>
               <circle cx="10" cy="10" r="2" fill="rgba(255,255,255,0.4)" />
               <circle cx="26" cy="10" r="2" fill="rgba(255,255,255,0.4)" />
               <circle cx="10" cy="26" r="2" fill="rgba(255,255,255,0.4)" />
@@ -57,7 +40,7 @@ export default function Header() {
           </div>
         </Link>
 
-        {/* Nav + Wallet */}
+        {/* Nav */}
         <div className="flex items-center gap-3 sm:gap-4">
           <Link
             href="/reservations"
@@ -68,16 +51,11 @@ export default function Header() {
             }`}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <span className="hidden sm:inline">Mis Reservas</span>
           </Link>
-          <WalletButton />
         </div>
       </div>
     </header>
