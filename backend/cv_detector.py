@@ -7,10 +7,11 @@ Modos de uso:
   python cv_detector.py --calibrate  → calibración visual de las 4 zonas ROI
 
 Flujo normal:
-  1. Abre la cámara y aprende el fondo durante 3 segundos (sin autos).
-  2. Monitorea 4 zonas ROI definidas en cv_config.json.
-  3. Cuando detecta un auto (cambio de píxeles > threshold), llama a POST /api/occupancy.
-  4. Repite al detectar que el auto se va.
+  1. Abre la cámara y captura un frame de fondo (sin autos) como referencia fija.
+  2. Monitorea 4 zonas ROI comparando cada frame contra ese fondo (absdiff).
+  3. Cuando detecta un auto (píxeles distintos > threshold), llama a POST /api/occupancy.
+  4. Al sacar el auto los píxeles vuelven al fondo → se marca como libre.
+  5. Presioná R en la ventana para recapturar el fondo si cambia la iluminación.
 
 Configuración (cv_config.json):
   - camera_index: índice de la cámara (0 = primera disponible)
@@ -37,7 +38,8 @@ DEFAULT_CONFIG = {
     "backend_url": BACKEND_URL,
     "camera_index": 0,
     "debounce_frames": 8,
-    "detection_threshold": 0.12,
+    "detection_threshold": 0.15,
+    "pixel_threshold": 30,
     "spaces": [
         {"id": "P1", "name": "Lugar P1", "mock_plate": "ABC123", "roi": [20,  20,  220, 220]},
         {"id": "P2", "name": "Lugar P2", "mock_plate": "XYZ456", "roi": [260, 20,  220, 220]},
@@ -247,30 +249,35 @@ def run_normal(config: dict):
     spaces      = config["spaces"]
     backend_url = config.get("backend_url", BACKEND_URL)
     debounce    = config.get("debounce_frames", 8)
-    threshold   = config.get("detection_threshold", 0.12)
+    threshold   = config.get("detection_threshold", 0.15)
+    pixel_thr   = config.get("pixel_threshold", 30)
 
     cap = cv2.VideoCapture(config.get("camera_index", 0))
     if not cap.isOpened():
         print("No se pudo abrir la cámara. Usá --demo para modo sin cámara.")
         sys.exit(1)
 
-    # MOG2 aprende el fondo durante los primeros frames
-    bg_sub = cv2.createBackgroundSubtractorMOG2(
-        history=200, varThreshold=25, detectShadows=False
-    )
+    def capture_reference():
+        """Descarta algunos frames (la cámara tarda en estabilizarse) y retorna el fondo."""
+        for _ in range(15):
+            cap.read()
+        ret, f = cap.read()
+        if not ret:
+            print("Error capturando frame de referencia.")
+            sys.exit(1)
+        gray = cv2.GaussianBlur(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), (21, 21), 0)
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Fondo capturado.")
+        return gray
 
-    print("Inicializando modelo de fondo (3 s) — asegurate de que no haya autos en los ROIs...")
-    for _ in range(30):
-        ret, frame = cap.read()
-        if ret:
-            bg_sub.apply(frame)
-        time.sleep(0.1)
-    print("Listo. Detectando... (Q para salir)\n")
+    print("Capturando fondo (2 s) — asegurate de que no haya autos en los ROIs...")
+    time.sleep(2)
+    ref_gray = capture_reference()
+    print("Listo. Detectando... (R = nuevo fondo | Q para salir)\n")
 
     current_state = {s["id"]: False for s in spaces}
-    pending       = {s["id"]: 0    for s in spaces}   # frames consecutivos de estado opuesto
+    pending       = {s["id"]: 0    for s in spaces}
 
-    COLOR = {True: (0, 0, 210), False: (0, 200, 0)}   # rojo / verde
+    COLOR = {True: (0, 0, 210), False: (0, 200, 0)}
 
     while True:
         ret, frame = cap.read()
@@ -278,8 +285,10 @@ def run_normal(config: dict):
             print("Error leyendo cámara.")
             break
 
-        fg_mask = bg_sub.apply(frame)
-        display  = frame.copy()
+        gray    = cv2.GaussianBlur(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (21, 21), 0)
+        diff    = cv2.absdiff(ref_gray, gray)
+        _, fg_mask = cv2.threshold(diff, pixel_thr, 255, cv2.THRESH_BINARY)
+        display = frame.copy()
 
         for space in spaces:
             x, y, w, h = space["roi"]
@@ -309,8 +318,11 @@ def run_normal(config: dict):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.42, (190, 190, 190), 1)
 
         cv2.imshow("SmartPark CV", display)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord("q"):
             break
+        elif key == ord("r"):
+            ref_gray = capture_reference()
 
     cap.release()
     cv2.destroyAllWindows()
