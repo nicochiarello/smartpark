@@ -26,6 +26,7 @@ import argparse
 import json
 import sys
 import time
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -43,8 +44,6 @@ DEFAULT_CONFIG = {
     "spaces": [
         {"id": "P1", "name": "Lugar P1", "mock_plate": "ABC123", "roi": [20,  20,  220, 220]},
         {"id": "P2", "name": "Lugar P2", "mock_plate": "XYZ456", "roi": [260, 20,  220, 220]},
-        {"id": "P3", "name": "Lugar P3", "mock_plate": "DEF789", "roi": [20,  260, 220, 220]},
-        {"id": "P4", "name": "Lugar P4", "mock_plate": "GHI012", "roi": [260, 260, 220, 220]},
     ],
 }
 
@@ -180,7 +179,7 @@ def run_demo(config: dict):
     state       = {s["id"]: False for s in spaces}
 
     print("\n=== SmartPark CV – Modo Demo ===")
-    print("Teclas: 1 2 3 4  →  toggle del espacio correspondiente")
+    print("Teclas: 1 2  →  toggle del espacio correspondiente")
     print("        Q         →  salir\n")
     for i, s in enumerate(spaces):
         print(f"  {i + 1}  →  {s['name']} ({s['id']})  patente: {s['mock_plate']}")
@@ -204,7 +203,7 @@ def run_demo(config: dict):
             if ch in ("q", "Q"):
                 print("\nSaliendo...")
                 break
-            if ch in "1234":
+            if ch in "12":
                 idx = int(ch) - 1
                 if idx < len(spaces):
                     s        = spaces[idx]
@@ -222,7 +221,7 @@ def run_demo(config: dict):
             ch = msvcrt.getwch()
             if ch in ("q", "Q"):
                 break
-            if ch in "1234":
+            if ch in "12":
                 idx = int(ch) - 1
                 if idx < len(spaces):
                     s       = spaces[idx]
@@ -297,7 +296,7 @@ def run_normal(config: dict):
                 continue
 
             ratio    = np.count_nonzero(roi_mask) / roi_mask.size
-            detected = ratio > threshold
+            detected = bool(ratio > threshold)
             sid      = space["id"]
 
             if detected != current_state[sid]:
@@ -305,7 +304,11 @@ def run_normal(config: dict):
                 if pending[sid] >= debounce:
                     current_state[sid] = detected
                     pending[sid]       = 0
-                    notify_backend(backend_url, sid, space["mock_plate"], detected)
+                    threading.Thread(
+                        target=notify_backend,
+                        args=(backend_url, sid, space["mock_plate"], detected),
+                        daemon=True,
+                    ).start()
             else:
                 pending[sid] = 0
 
