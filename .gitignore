@@ -41,3 +41,6 @@ artifacts
 venv/
 .env
 __pycache__/
+
+# Configuration json for the project
+/backend/cv_config.json
