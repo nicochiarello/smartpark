@@ -2,6 +2,10 @@
 
 Sistema de estacionamiento inteligente con reservas via MercadoPago (mock), registro inmutable en blockchain (Ethereum Sepolia) y detección de autos en maqueta física mediante computer vision.
 
+## Documentación
+
+El siguiente link contiene la carpeta de documentación del proyecto, con diagramas de arquitectura, diagramas de flujo y documentación de la API: [Documentación SmartPark](https://drive.google.com/drive/folders/1XlFt4_NkR0DaheaebVWFcBu1emSwP7L6?usp=sharing)
+
 ---
 
 ## Arquitectura general
@@ -38,11 +42,11 @@ Sistema de estacionamiento inteligente con reservas via MercadoPago (mock), regi
 ## Estados de un lugar
 
 | Color en mapa | Estado             | Significado                                 |
-|---------------|--------------------|---------------------------------------------|
-| 🟢 Verde      | `available`        | Libre, disponible para reservar             |
-| 🔵 Azul       | `reserved`         | Reserva pagada, el auto aún no llegó        |
-| 🟣 Violeta    | `occupied_valid`   | Auto detectado por CV con reserva válida    |
-| 🔴 Rojo       | `occupied_illegal` | Auto detectado por CV sin reserva (intruso) |
+| ------------- | ------------------ | ------------------------------------------- |
+| 🟢 Verde       | `available`        | Libre, disponible para reservar             |
+| 🔵 Azul        | `reserved`         | Reserva pagada, el auto aún no llegó        |
+| 🟣 Violeta     | `occupied_valid`   | Auto detectado por CV con reserva válida    |
+| 🔴 Rojo        | `occupied_illegal` | Auto detectado por CV sin reserva (intruso) |
 
 ---
 
@@ -217,11 +221,11 @@ Llamado por el script de computer vision cuando detecta que un auto entra o sale
 
 **Lógica de validación:**
 
-| Condición                                          | `space_status`      | `is_valid` |
-|----------------------------------------------------|---------------------|------------|
-| `occupied: true` + reserva activa para esa patente | `occupied_valid`    | `true`     |
-| `occupied: true` + sin reserva                     | `occupied_illegal`  | `false`    |
-| `occupied: false`                                  | `available`         | `null`     |
+| Condición                                          | `space_status`     | `is_valid` |
+| -------------------------------------------------- | ------------------ | ---------- |
+| `occupied: true` + reserva activa para esa patente | `occupied_valid`   | `true`     |
+| `occupied: true` + sin reserva                     | `occupied_illegal` | `false`    |
+| `occupied: false`                                  | `available`        | `null`     |
 
 Una reserva es **activa** si cumple todo esto al mismo tiempo:
 
@@ -269,12 +273,12 @@ El municipio recauda dinero por el uso de los espacios. Sin un registro a prueba
 
 ### Contratos desplegados (Ethereum Sepolia)
 
-| Contrato | Dirección | Rol |
-|---|---|---|
+| Contrato          | Dirección                                    | Rol                                           |
+| ----------------- | -------------------------------------------- | --------------------------------------------- |
 | `ParkingRegistry` | `0xAA1D0Db2f67207cf9e1690C52Fd23E6Ec25b44AF` | Auditoría de reservas (en uso por el backend) |
-| `SparkToken` | `0x06d3879d38fed1c6520F303AD384e66A06C8d808` | Token que representa pesos recaudados |
-| `MockUSDC` | `0xaC90634738814c607a528079a0D8b7A4b67AE23a` | Stablecoin simulada para el swap |
-| `SimpleSwap` | `0xb8a0f8964516d1844209cbd4f0fd4e76a5f8810c` | Pool de intercambio SPARK ↔ mUSDC |
+| `SparkToken`      | `0x06d3879d38fed1c6520F303AD384e66A06C8d808` | Token que representa pesos recaudados         |
+| `MockUSDC`        | `0xaC90634738814c607a528079a0D8b7A4b67AE23a` | Stablecoin simulada para el swap              |
+| `SimpleSwap`      | `0xb8a0f8964516d1844209cbd4f0fd4e76a5f8810c` | Pool de intercambio SPARK ↔ mUSDC             |
 
 Ver en Etherscan: `https://sepolia.etherscan.io/address/<dirección>`
 
@@ -350,7 +354,7 @@ Requiere haber calibrado previamente. Usa sustracción de fondo (MOG2) para dete
 Cada lugar tiene una patente de auto asignada en la configuración. Cuando el CV detecta un auto en un lugar, informa esa patente al backend para verificar si tiene reserva.
 
 | Lugar | Patente CV (`mock_plate`) |
-|-------|---------------------------|
+| ----- | ------------------------- |
 | P1    | `ABC123`                  |
 | P2    | `XYZ456`                  |
 | P3    | `DEF789`                  |
@@ -459,46 +463,46 @@ smartpark/
 
 Estado actual de cada lugar (fuente de verdad para el frontend).
 
-| Columna                  | Tipo         | Descripción                               |
-|--------------------------|--------------|-------------------------------------------|
-| `id`                     | text PK      | Identificador del lugar (P1, P2, P3, P4)  |
-| `name`                   | text         | Nombre visible                            |
-| `address`                | text         | Dirección                                 |
-| `lat` / `lng`            | float        | Coordenadas para el mapa                  |
-| `price_per_hour`         | numeric      | Precio en ARS por hora                    |
-| `status`                 | text         | Estado actual del lugar                   |
-| `current_license_plate`  | text         | Patente del auto actualmente detectado    |
-| `updated_at`             | timestamptz  | Última actualización                      |
+| Columna                 | Tipo        | Descripción                              |
+| ----------------------- | ----------- | ---------------------------------------- |
+| `id`                    | text PK     | Identificador del lugar (P1, P2, P3, P4) |
+| `name`                  | text        | Nombre visible                           |
+| `address`               | text        | Dirección                                |
+| `lat` / `lng`           | float       | Coordenadas para el mapa                 |
+| `price_per_hour`        | numeric     | Precio en ARS por hora                   |
+| `status`                | text        | Estado actual del lugar                  |
+| `current_license_plate` | text        | Patente del auto actualmente detectado   |
+| `updated_at`            | timestamptz | Última actualización                     |
 
 ### `reservations`
 
 Reservas creadas desde la web.
 
-| Columna               | Tipo        | Descripción                           |
-|-----------------------|-------------|---------------------------------------|
-| `id`                  | uuid PK     | ID único de la reserva                |
-| `space_id`            | text FK     | Lugar reservado                       |
-| `user_name`           | text        | Nombre del usuario                    |
-| `license_plate`       | text        | Patente del vehículo                  |
-| `date`                | date        | Fecha de la reserva                   |
-| `time_from`           | time        | Hora de inicio                        |
-| `time_to`             | time        | Hora de fin                           |
-| `amount_pesos`        | numeric     | Monto pagado en ARS                   |
-| `mp_mock_id`          | text        | ID simulado de MercadoPago            |
-| `blockchain_tx_hash`  | text        | Hash de la transacción en Sepolia     |
-| `status`              | text        | `active` / `completed` / `cancelled`  |
+| Columna              | Tipo    | Descripción                          |
+| -------------------- | ------- | ------------------------------------ |
+| `id`                 | uuid PK | ID único de la reserva               |
+| `space_id`           | text FK | Lugar reservado                      |
+| `user_name`          | text    | Nombre del usuario                   |
+| `license_plate`      | text    | Patente del vehículo                 |
+| `date`               | date    | Fecha de la reserva                  |
+| `time_from`          | time    | Hora de inicio                       |
+| `time_to`            | time    | Hora de fin                          |
+| `amount_pesos`       | numeric | Monto pagado en ARS                  |
+| `mp_mock_id`         | text    | ID simulado de MercadoPago           |
+| `blockchain_tx_hash` | text    | Hash de la transacción en Sepolia    |
+| `status`             | text    | `active` / `completed` / `cancelled` |
 
 ### `occupancy_events`
 
 Log de cada detección del CV (complementa el registro en blockchain).
 
-| Columna               | Tipo        | Descripción                                             |
-|-----------------------|-------------|---------------------------------------------------------|
-| `id`                  | uuid PK     | ID del evento                                           |
-| `space_id`            | text FK     | Lugar donde se detectó el auto                          |
-| `license_plate`       | text        | Patente detectada                                       |
-| `occupied`            | boolean     | `true` = llegó, `false` = se fue                        |
-| `is_valid`            | boolean     | `true` = reserva, `false` = intruso, `null` = salida    |
-| `duration_seconds`    | integer     | Segundos que estuvo el auto                             |
-| `blockchain_tx_hash`  | text        | TX hash del evento en blockchain                        |
-| `detected_at`         | timestamptz | Momento de la detección                                 |
+| Columna              | Tipo        | Descripción                                          |
+| -------------------- | ----------- | ---------------------------------------------------- |
+| `id`                 | uuid PK     | ID del evento                                        |
+| `space_id`           | text FK     | Lugar donde se detectó el auto                       |
+| `license_plate`      | text        | Patente detectada                                    |
+| `occupied`           | boolean     | `true` = llegó, `false` = se fue                     |
+| `is_valid`           | boolean     | `true` = reserva, `false` = intruso, `null` = salida |
+| `duration_seconds`   | integer     | Segundos que estuvo el auto                          |
+| `blockchain_tx_hash` | text        | TX hash del evento en blockchain                     |
+| `detected_at`        | timestamptz | Momento de la detección                              |
