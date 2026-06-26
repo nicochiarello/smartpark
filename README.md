@@ -84,6 +84,9 @@ SUPABASE_SERVICE_KEY=<service_role_key>
 SEPOLIA_RPC_URL=https://ethereum-sepolia.publicnode.com
 PRIVATE_KEY=0x<clave_privada_de_la_wallet_autorizada>
 PARKING_REGISTRY_ADDRESS=0x<dirección_del_contrato_desplegado>
+SPARK_TOKEN_ADDRESS=0x<dirección_de_SparkToken>
+MOCK_USDC_ADDRESS=0x<dirección_de_MockUSDC>
+SIMPLE_SWAP_ADDRESS=0x<dirección_de_SimpleSwap>
 ```
 
 > **IMPORTANTE:** Nunca subas `backend/.env` al repositorio. Está en `.gitignore`.
@@ -172,11 +175,15 @@ Crea una reserva luego de que el usuario completa el pago mock de MercadoPago. A
     "tx_hash": "0xabc...",
     "block_number": 123456,
     "status": "success"
+  },
+  "tokenization": {
+    "mint": { "tx_hash": "0x111...", "status": "success" },
+    "swap": { "tx_hash": "0x222...", "status": "success" }
   }
 }
 ```
 
-> Si la blockchain falla (sin gas, contrato no desplegado, etc.), `blockchain` devuelve `{"status": "error", "error": "..."}` pero la reserva **igual se guarda en Supabase** y la respuesta es exitosa.
+> Si la blockchain falla (sin gas, contrato no desplegado, etc.), `blockchain` devuelve `{"status": "error", "error": "..."}` pero la reserva **igual se guarda en Supabase** y la respuesta es exitosa. Lo mismo aplica para `tokenization`: si el mint o el swap fallan (por ejemplo, poca liquidez en el pool), no bloquean la reserva — el error queda en `tokenization.error`.
 
 ---
 
@@ -248,6 +255,42 @@ Devuelve el historial de eventos de un lugar desde la blockchain.
   ]
 }
 ```
+
+---
+
+## Blockchain
+
+### Por qué blockchain en este proyecto
+
+El municipio recauda dinero por el uso de los espacios. Sin un registro a prueba de manipulación, un empleado podría alterar cuántos autos estacionaron o cuánto se cobró. Cada contrato resuelve una parte distinta de ese problema:
+
+- **`ParkingRegistry`** sella de forma inmutable cada reserva (patente + espacio + timestamp + monto), para que la recaudación sea auditable por cualquiera.
+- **`SparkToken` / `MockUSDC` / `SimpleSwap`** tokenizan esa recaudación y la convierten automáticamente a un activo estable, protegiéndola de la inflación del peso.
+
+### Contratos desplegados (Ethereum Sepolia)
+
+| Contrato | Dirección | Rol |
+|---|---|---|
+| `ParkingRegistry` | `0xAA1D0Db2f67207cf9e1690C52Fd23E6Ec25b44AF` | Auditoría de reservas (en uso por el backend) |
+| `SparkToken` | `0x06d3879d38fed1c6520F303AD384e66A06C8d808` | Token que representa pesos recaudados |
+| `MockUSDC` | `0xaC90634738814c607a528079a0D8b7A4b67AE23a` | Stablecoin simulada para el swap |
+| `SimpleSwap` | `0xb8a0f8964516d1844209cbd4f0fd4e76a5f8810c` | Pool de intercambio SPARK ↔ mUSDC |
+
+Ver en Etherscan: `https://sepolia.etherscan.io/address/<dirección>`
+
+### `ParkingRegistry.sol` — auditoría de reservas
+
+Es el contrato que usa `POST /api/reservations` en cada reserva pagada. Guarda un registro permanente con la patente (ya validada por regex en el backend), el ID del espacio, el timestamp (lo pone la blockchain automáticamente), el monto pagado, y si el espacio quedó ocupado o liberado.
+
+**Control de acceso:** solo wallets explícitamente autorizadas (`authorizedReporters`) pueden escribir — así nadie externo puede insertar eventos falsos. La wallet del backend es la única autorizada actualmente.
+
+**Funciones principales:** `registerEvent(...)` (escribir), `getHistoryBySpace(spaceId)` (consultar el historial completo de un lugar, usado por `GET /api/spaces/<space_id>/history`), `addAuthorizedReporter(address)` (el owner autoriza nuevas wallets si hiciera falta).
+
+### `SparkToken.sol` + `MockUSDC.sol` + `SimpleSwap.sol` — tokenización de la recaudación
+
+Cada vez que `POST /api/reservations` confirma un pago, el backend mintea `SPARK` 1:1 representando esos pesos recaudados, y de inmediato lo convierte a `MockUSDC` (una stablecoin simulada) usando `SimpleSwap` — un pool con la fórmula *constant product* (`x*y=k`), el mismo principio que usa Uniswap. Esto pasa automáticamente en cada reserva, sin bloquearla si falla (ver nota en la sección de la API).
+
+> **Nota de diseño:** `SparkToken` es un token de solo emisión (sin función de quema), por lo que el precio del swap se degrada con ventas repetidas hacia el mismo pool — es una simplificación deliberada para esta etapa de MVP. Un diseño de producción reemplazaría el swap de mercado por un canje a tasa fija (quemar SPARK, entregar mUSDC 1:1), evitando depender de la liquidez del pool.
 
 ---
 
@@ -377,6 +420,7 @@ smartpark/
 │   ├── SpaceDetailPanel.tsx     # Panel lateral al seleccionar lugar
 │   ├── ReservationModal.tsx     # Modal de reserva + mock MercadoPago
 │   ├── ReservationCard.tsx      # Tarjeta en historial de reservas
+│   ├── TimeRangeSelector.tsx    # Selector de horario en la reserva
 │   ├── StatusBadge.tsx          # Badge de estado
 │   └── Header.tsx               # Barra de navegación
 ├── context/
@@ -384,20 +428,27 @@ smartpark/
 ├── lib/
 │   ├── types.ts                 # Tipos TypeScript (ParkingSpace, Reservation)
 │   ├── utils.ts                 # Helpers (formatARS, calculateDuration, etc.)
-│   └── mockData.ts              # Datos de fallback si el backend no responde
+│   ├── mockData.ts              # Datos de fallback si el backend no responde
+│   └── spaceMetadata.ts         # Nombres/direcciones de los 4 lugares
 ├── backend/
 │   ├── app.py                   # API Flask (endpoints principales)
 │   ├── blockchain_client.py     # Cliente web3 para ParkingRegistry
+│   ├── swap_client.py           # Cliente web3 para SparkToken/MockUSDC/SimpleSwap
 │   ├── cv_detector.py           # Script de computer vision para la maqueta
 │   ├── cv_config.json           # Configuración de ROIs (se genera al calibrar)
 │   ├── supabase_schema.sql      # Schema de la base de datos
-│   ├── ParkingRegistry.abi.json # ABI del contrato desplegado
+│   ├── ParkingRegistry.abi.json # ABI de ParkingRegistry
+│   ├── SparkToken.abi.json      # ABI de SparkToken
+│   ├── MockUSDC.abi.json        # ABI de MockUSDC
+│   ├── SimpleSwap.abi.json      # ABI de SimpleSwap
 │   ├── requirements.txt         # Dependencias Python
 │   └── .env                     # Variables de entorno (NO subir al repo)
 └── blockchain/
     └── contracts/
-        ├── SmartPark.sol        # Contrato de reservas (referencia)
-        └── ParkingRegistry.sol  # Contrato de auditoría (en uso)
+        ├── SmartPark.sol        # Contrato de auditoría
+        ├── SparkToken.sol       # Token que representa pesos recaudados
+        ├── MockUSDC.sol         # Stablecoin simulada
+        └── SimpleSwap.sol       # Pool de swap SPARK <-> mUSDC
 ```
 
 ---
